@@ -1,0 +1,43 @@
+# Build artifacts
+bin/
+/epithet-aws
+*.exe
+
+# Go
+*.test
+coverage.out
+coverage.html
+
+# OpenTofu/Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Environment and secrets
+.env
+*.env
+.envrc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local working files
+/policy.yaml
+/policy.cue

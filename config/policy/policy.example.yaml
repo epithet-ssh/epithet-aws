@@ -1,0 +1,139 @@
+# Example policy configuration for epithet-aws
+# Copy this file to config/policy/policy.yaml and customize for your organization
+#
+# This file configures:
+# 1. Which OIDC provider to trust for user authentication
+# 2. How to map users to tags/roles
+# 3. What SSH certificate principals to grant based on tags
+# 4. Certificate lifetimes and host-specific overrides
+
+# =============================================================================
+# CA Public Key (Required placeholder)
+# =============================================================================
+# The actual CA public key is loaded from SSM Parameter Store at runtime.
+# This placeholder is required to pass config validation.
+
+ca_public_key: "placeholder - loaded from SSM"
+
+# =============================================================================
+# OIDC Provider Configuration
+# =============================================================================
+# Choose ONE provider and configure its issuer and audience (client ID)
+
+oidc:
+  # Google Workspace / Google Cloud Identity
+  issuer: https://accounts.google.com
+  audience: your-client-id.apps.googleusercontent.com
+
+  # GitHub (for GitHub Actions or GitHub OAuth)
+  # issuer: https://token.actions.githubusercontent.com
+  # audience: your-github-audience
+
+  # Okta
+  # issuer: https://your-domain.okta.com
+  # audience: your-client-id
+
+  # Azure AD / Entra ID
+  # issuer: https://login.microsoftonline.com/your-tenant-id/v2.0
+  # audience: your-client-id
+
+  # Auth0
+  # issuer: https://your-tenant.auth0.com/
+  # audience: your-client-id
+
+  # Keycloak
+  # issuer: https://keycloak.example.com/realms/your-realm
+  # audience: your-client-id
+
+# =============================================================================
+# User-to-Tag Mapping
+# =============================================================================
+# Map user identities (email from OIDC token) to tags
+# Tags are used to determine which principals/permissions a user gets
+
+users:
+  # Individual user mappings
+  alice@example.com: [admin, eng]
+  bob@example.com: [eng]
+  charlie@example.com: [ops]
+
+  # You can use wildcards for domain-wide access
+  # "*@example.com": [employee]
+
+  # Service accounts
+  # deploy-bot@example.iam.gserviceaccount.com: [deployer]
+
+# =============================================================================
+# Default Principal Grants
+# =============================================================================
+# Map tags to SSH certificate principals that apply to all hosts
+
+defaults:
+  allow:
+    # Admins get the 'wheel' principal on all servers
+    wheel: [admin]
+
+    # Engineers get 'developers' principal
+    developers: [eng]
+
+    # Ops team gets 'operators' principal
+    operators: [ops]
+
+    # Everyone with 'employee' tag gets basic access
+    # users: [employee]
+
+  # Default certificate lifetime
+  # Use short lifetimes for security (1m to 8h typical)
+  expiration: "5m"
+
+# =============================================================================
+# Host-Specific Policies
+# =============================================================================
+# Override principals or expiration for specific host patterns
+# Patterns support wildcards (*) for matching
+
+hosts:
+  # Production servers - shorter certificate lifetime
+  prod-*:
+    allow:
+      deployers: [eng]
+    expiration: "2m"
+
+  # Database servers - restricted access
+  prod-db-*:
+    allow:
+      postgres: [admin]           # Only admins get postgres user
+      dbadmins: [admin, ops]      # Admins and ops get dbadmins group
+    expiration: "2m"
+
+  # Development servers - relaxed policies
+  dev-*:
+    allow:
+      docker: [eng]               # Engineers can use docker
+      sudo: [eng, ops]            # sudo access for dev
+    expiration: "10m"             # Longer lifetime for convenience
+
+  # CI/CD runners - service account access
+  ci-*:
+    allow:
+      deployer: [deployer]
+    expiration: "1m"
+
+  # Bastion/jump hosts - everyone with employee tag
+  bastion-*:
+    allow:
+      jump: [employee]
+    expiration: "1m"
+
+# =============================================================================
+# Certificate Extensions (optional)
+# =============================================================================
+# SSH certificate extensions control what the certificate allows
+# Common extensions:
+#   permit-pty           - Allow terminal allocation
+#   permit-agent-forwarding - Allow SSH agent forwarding
+#   permit-port-forwarding  - Allow port forwarding
+#   permit-X11-forwarding   - Allow X11 forwarding
+
+# These are typically configured in the CA server, not the policy
+# See cmd/epithet-aws/aws.go if you need to customize extensions

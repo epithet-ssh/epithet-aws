@@ -1,0 +1,22 @@
+# CA public key is loaded from SSM Parameter Store at runtime
+# This placeholder satisfies config validation
+ca_public_key: "placeholder - loaded from SSM"
+
+oidc:
+  issuer: https://accounts.google.com
+  audience: abc123
+users:
+  a@example: [wheel]
+  b@example.com: [dev]
+
+defaults:
+  allow:
+    root: [wheel]
+    arch: [dev, wheel]
+  expiration: "5m"
+
+hosts:
+  "prod-*.example.com":
+    allow:
+      deploy: [dev]
+    expiration: "2m"
