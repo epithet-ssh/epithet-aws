@@ -31,6 +31,7 @@ output "ca_public_key_command" {
 output "ca_public_key" {
   description = "CA public key (run 'make setup-ca-key' first to populate)"
   value       = aws_ssm_parameter.ca_public_key.value
+  sensitive   = true
 }
 
 output "region" {
