@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.92.0
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.40.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.67.3
-	github.com/epithet-ssh/epithet v0.1.3
+	github.com/epithet-ssh/epithet v0.1.5
 	github.com/lmittmann/tint v1.1.2
 )
 

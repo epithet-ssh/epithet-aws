@@ -62,8 +62,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/emicklei/proto v1.14.2 h1:wJPxPy2Xifja9cEMrcA/g08art5+7CGJNFNk35iXC1I=
 github.com/emicklei/proto v1.14.2/go.mod h1:rn1FgRS/FANiZdD2djyH7TMA9jdRDcYQ9IEN9yvjX0A=
-github.com/epithet-ssh/epithet v0.1.3 h1:bhQ+cFjMopFyJgdFmwatHJfurRcNafAjRVBjeyrUeNI=
-github.com/epithet-ssh/epithet v0.1.3/go.mod h1:kXaIE8IQYKMp1qLFy1noosi1n2bk7ZXDEnVi3azi9Lk=
+github.com/epithet-ssh/epithet v0.1.5 h1:1+QNNwn2Gfs+mvGA5azf3oQVms5VEDUdZQjyV228Tlg=
+github.com/epithet-ssh/epithet v0.1.5/go.mod h1:+dTqxEZyjGfuTrI0Q6b5KAcrflKVPrjMgJmzrNCXhyk=
 github.com/go-jose/go-jose/v4 v4.1.3 h1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=
 github.com/go-jose/go-jose/v4 v4.1.3/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
 github.com/go-quicktest/qt v1.101.0 h1:O1K29Txy5P2OK0dGo59b7b0LR6wKfIhttaAhHUyn7eI=

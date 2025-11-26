@@ -113,7 +113,7 @@ The archiver is wired to the CA Lambda via `certLoggerAdapter` which implements 
 ## Environment Variables
 
 ### CA Lambda
-- `CA_SECRET_ARN` - Secrets Manager ARN for CA private key
+- `CA_SECRET_ARN` - Secrets Manager ARN for CA private key (raw OpenSSH private key format)
 - `POLICY_URL` - Internal policy Lambda endpoint
 - `CERT_ARCHIVE_BUCKET` - S3 bucket name
 - `CERT_ARCHIVE_PREFIX` - S3 key prefix (default: "certs")
@@ -122,6 +122,14 @@ The archiver is wired to the CA Lambda via `certLoggerAdapter` which implements 
 ### Policy Lambda
 - `CA_PUBLIC_KEY_PARAM` - SSM parameter name containing CA public key
 - `EPITHET_CMD` - Set to "policy" by Terraform
+
+### TLS Configuration (both handlers)
+- `EPITHET_INSECURE` - Disable TLS certificate verification (NOT RECOMMENDED for production)
+- `EPITHET_TLS_CA_CERT` - Path to PEM file with trusted CA certificates
+
+TLS configuration can also be set via command-line flags:
+- `--insecure` - Disable TLS certificate verification
+- `--tls-ca-cert` - Path to PEM file with trusted CA certificates
 
 Policy configuration is loaded from `/var/task/policy.yaml` (bundled in the Lambda zip). The CA public key is loaded from SSM Parameter Store at runtime.
 

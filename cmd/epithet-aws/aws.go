@@ -22,6 +22,7 @@ import (
 	policyconfig "github.com/epithet-ssh/epithet/pkg/policyserver/config"
 	"github.com/epithet-ssh/epithet/pkg/policyserver/evaluator"
 	"github.com/epithet-ssh/epithet/pkg/sshcert"
+	"github.com/epithet-ssh/epithet/pkg/tlsconfig"
 )
 
 type AwsCALambdaCLI struct {
@@ -35,8 +36,13 @@ type AwsPolicyLambdaCLI struct {
 	CAPublicKeyParam string `help:"SSM parameter name containing CA public key" env:"CA_PUBLIC_KEY_PARAM" required:"true"`
 }
 
-func (a *AwsCALambdaCLI) Run(logger *slog.Logger) error {
+func (a *AwsCALambdaCLI) Run(logger *slog.Logger, tlsCfg tlsconfig.Config) error {
 	logger.Info("starting CA Lambda handler", "policy_url", a.PolicyURL)
+
+	// Validate policy URL requires TLS (unless --insecure)
+	if err := tlsCfg.ValidateURL(a.PolicyURL); err != nil {
+		return err
+	}
 
 	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
@@ -56,13 +62,19 @@ func (a *AwsCALambdaCLI) Run(logger *slog.Logger) error {
 		return fmt.Errorf("CA private key not set in secret")
 	}
 
-	caInstance, err := ca.New(sshcert.RawPrivateKey(privateKey), a.PolicyURL)
+	caInstance, err := ca.New(sshcert.RawPrivateKey(privateKey), a.PolicyURL, ca.WithTLSConfig(tlsCfg))
 	if err != nil {
 		return fmt.Errorf("failed to create CA: %w", err)
 	}
 
+	// Create HTTP client with TLS config
+	httpClient, err := tlsconfig.NewHTTPClient(tlsCfg)
+	if err != nil {
+		return fmt.Errorf("failed to create HTTP client: %w", err)
+	}
+
 	certLogger := a.createCertLogger(cfg, logger)
-	handler := caserver.New(caInstance, logger, &http.Client{}, certLogger)
+	handler := caserver.New(caInstance, logger, httpClient, certLogger)
 
 	logger.Info("CA Lambda initialized successfully")
 
@@ -100,7 +112,7 @@ func (a *AwsCALambdaCLI) createCertLogger(cfg aws.Config, logger *slog.Logger) c
 	}
 }
 
-func (a *AwsPolicyLambdaCLI) Run(logger *slog.Logger) error {
+func (a *AwsPolicyLambdaCLI) Run(logger *slog.Logger, tlsCfg tlsconfig.Config) error {
 	logger.Info("starting policy Lambda handler")
 
 	// Load policy configuration from bundled file
@@ -138,7 +150,7 @@ func (a *AwsPolicyLambdaCLI) Run(logger *slog.Logger) error {
 	logger.Info("CA public key loaded from SSM Parameter Store")
 
 	ctx := context.Background()
-	eval, err := evaluator.New(ctx, cfg)
+	eval, err := evaluator.New(ctx, cfg, tlsCfg)
 	if err != nil {
 		return fmt.Errorf("failed to create policy evaluator: %w", err)
 	}
