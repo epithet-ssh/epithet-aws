@@ -22,3 +22,8 @@ resource "aws_ssm_parameter" "ca_public_key" {
 }
 
 # Note: Both values are populated by running `make setup-ca-key` after initial deploy
+
+# Data source to read the current secret value (for passing to Lambda)
+data "aws_secretsmanager_secret_version" "ca_key" {
+  secret_id = aws_secretsmanager_secret.ca_key.id
+}
