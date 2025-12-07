@@ -39,83 +39,6 @@ resource "aws_iam_role_policy" "ca_lambda_secrets" {
   })
 }
 
-# S3 bucket for certificate archival
-resource "aws_s3_bucket" "cert_archive" {
-  bucket = "${local.name_prefix}-cert-archive"
-
-  tags = merge(local.common_tags, {
-    Purpose = "Certificate audit trail and analytics"
-  })
-}
-
-# Enable versioning on cert archive bucket (compliance best practice)
-resource "aws_s3_bucket_versioning" "cert_archive" {
-  bucket = aws_s3_bucket.cert_archive.id
-
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-# Server-side encryption for cert archive
-resource "aws_s3_bucket_server_side_encryption_configuration" "cert_archive" {
-  bucket = aws_s3_bucket.cert_archive.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-# Block public access to cert archive
-resource "aws_s3_bucket_public_access_block" "cert_archive" {
-  bucket = aws_s3_bucket.cert_archive.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-# Lifecycle policy for cert archive (optional: delete old archives)
-resource "aws_s3_bucket_lifecycle_configuration" "cert_archive" {
-  bucket = aws_s3_bucket.cert_archive.id
-
-  rule {
-    id     = "archive-retention"
-    status = var.cert_archive_retention_days > 0 ? "Enabled" : "Disabled"
-
-    filter {}
-
-    expiration {
-      days = var.cert_archive_retention_days
-    }
-
-    noncurrent_version_expiration {
-      noncurrent_days = 30
-    }
-  }
-}
-
-# Policy to allow CA Lambda to write to cert archive bucket
-resource "aws_iam_role_policy" "ca_lambda_s3" {
-  name = "${local.name_prefix}-ca-s3"
-  role = aws_iam_role.ca_lambda.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "s3:PutObject",
-        "s3:PutObjectAcl"
-      ]
-      Resource = "${aws_s3_bucket.cert_archive.arn}/*"
-    }]
-  })
-}
-
 # CloudWatch log group for CA Lambda
 resource "aws_cloudwatch_log_group" "ca_lambda" {
   name              = "/aws/lambda/${local.name_prefix}-ca"
@@ -126,7 +49,7 @@ resource "aws_cloudwatch_log_group" "ca_lambda" {
 
 # CA Lambda function
 resource "aws_lambda_function" "ca" {
-  filename         = "../bin/bootstrap-ca.zip"
+  filename         = "../bin/ca.zip"
   function_name    = "${local.name_prefix}-ca"
   role             = aws_iam_role.ca_lambda.arn
   handler          = "bootstrap"
@@ -134,15 +57,21 @@ resource "aws_lambda_function" "ca" {
   architectures    = ["arm64"]
   memory_size      = var.lambda_memory_mb
   timeout          = var.lambda_timeout_sec
-  source_code_hash = filebase64sha256("../bin/bootstrap-ca.zip")
+  source_code_hash = filebase64sha256("../bin/ca.zip")
+
+  # AWS Lambda Web Adapter layer
+  layers = [local.lambda_web_adapter_layer_arn]
 
   environment {
     variables = {
-      CA_SECRET_ARN       = aws_secretsmanager_secret.ca_key.arn
-      POLICY_URL          = aws_apigatewayv2_api.policy.api_endpoint
-      CERT_ARCHIVE_BUCKET = aws_s3_bucket.cert_archive.id
-      CERT_ARCHIVE_PREFIX = "certs"
-      EPITHET_CMD         = "ca"
+      # Lambda Web Adapter configuration
+      AWS_LAMBDA_EXEC_WRAPPER      = "/opt/bootstrap"
+      AWS_LWA_PORT                 = "8080"
+      AWS_LWA_READINESS_CHECK_PATH = "/"
+
+      # Application configuration
+      CA_SECRET_ARN = aws_secretsmanager_secret.ca_key.arn
+      POLICY_URL    = aws_apigatewayv2_api.policy.api_endpoint
     }
   }
 
@@ -150,7 +79,6 @@ resource "aws_lambda_function" "ca" {
     aws_cloudwatch_log_group.ca_lambda,
     aws_iam_role_policy_attachment.ca_lambda_logs,
     aws_iam_role_policy.ca_lambda_secrets,
-    aws_iam_role_policy.ca_lambda_s3,
   ]
 
   tags = local.common_tags

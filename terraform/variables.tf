@@ -27,9 +27,3 @@ variable "log_retention_days" {
   type        = number
   default     = 7
 }
-
-variable "cert_archive_retention_days" {
-  description = "Certificate archive retention period in days (0 = keep forever)"
-  type        = number
-  default     = 0
-}

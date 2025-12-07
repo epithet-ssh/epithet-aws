@@ -1,6 +1,6 @@
 # CA public key is loaded from SSM Parameter Store at runtime
 # This placeholder satisfies config validation
-ca_public_key: "placeholder - loaded from SSM"
+ca_pubkey: "placeholder - loaded from SSM"
 
 oidc:
   issuer: https://accounts.google.com

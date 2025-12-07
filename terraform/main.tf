@@ -29,6 +29,9 @@ resource "random_id" "suffix" {
   byte_length = 4
 }
 
+# Data source for current region
+data "aws_region" "current" {}
+
 locals {
   name_prefix = "${var.project_name}-${random_id.suffix.hex}"
 
@@ -37,4 +40,7 @@ locals {
     ManagedBy   = "OpenTofu"
     Component   = "epithet"
   }
+
+  # Lambda Web Adapter layer ARN for arm64
+  lambda_web_adapter_layer_arn = "arn:aws:lambda:${data.aws_region.current.name}:753240598075:layer:LambdaAdapterLayerArm64:25"
 }

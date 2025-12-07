@@ -49,7 +49,7 @@ resource "aws_cloudwatch_log_group" "policy_lambda" {
 
 # Policy Lambda function
 resource "aws_lambda_function" "policy" {
-  filename         = "../bin/bootstrap-policy.zip"
+  filename         = "../bin/policy.zip"
   function_name    = "${local.name_prefix}-policy"
   role             = aws_iam_role.policy_lambda.arn
   handler          = "bootstrap"
@@ -57,12 +57,20 @@ resource "aws_lambda_function" "policy" {
   architectures    = ["arm64"]
   memory_size      = var.lambda_memory_mb
   timeout          = var.lambda_timeout_sec
-  source_code_hash = filebase64sha256("../bin/bootstrap-policy.zip")
+  source_code_hash = filebase64sha256("../bin/policy.zip")
+
+  # AWS Lambda Web Adapter layer
+  layers = [local.lambda_web_adapter_layer_arn]
 
   environment {
     variables = {
+      # Lambda Web Adapter configuration
+      AWS_LAMBDA_EXEC_WRAPPER      = "/opt/bootstrap"
+      AWS_LWA_PORT                 = "8080"
+      AWS_LWA_READINESS_CHECK_PATH = "/"
+
+      # Application configuration
       CA_PUBLIC_KEY_PARAM = aws_ssm_parameter.ca_public_key.name
-      EPITHET_CMD         = "policy"
     }
   }
 
