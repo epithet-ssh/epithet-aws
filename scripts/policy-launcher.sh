@@ -2,26 +2,19 @@
 set -euo pipefail
 
 # Policy Lambda Launcher Script
-# Fetches CA public key from SSM and starts epithet policy
+# Uses CA public key from environment variable and starts epithet policy
 
 # Required environment variables:
-#   CA_PUBLIC_KEY_PARAM - SSM parameter name containing CA public key
+#   CA_PUBLIC_KEY - CA public key (passed from SSM via env var)
 
 # Validate required environment variables
-: "${CA_PUBLIC_KEY_PARAM:?CA_PUBLIC_KEY_PARAM environment variable is required}"
+: "${CA_PUBLIC_KEY:?CA_PUBLIC_KEY environment variable is required}"
 
 # Set defaults
 PORT="${AWS_LWA_PORT:-8080}"
 
-# Fetch CA public key from SSM Parameter Store
-echo "Fetching CA public key from SSM Parameter Store..." >&2
-
-CA_PUBLIC_KEY=$(aws ssm get-parameter \
-    --name "${CA_PUBLIC_KEY_PARAM}" \
-    --query 'Parameter.Value' \
-    --output text)
-
-if [ -z "${CA_PUBLIC_KEY}" ] || [ "${CA_PUBLIC_KEY}" = "placeholder - run make setup-ca-key to populate" ]; then
+# Validate key is set (not the placeholder)
+if [ "${CA_PUBLIC_KEY}" = "placeholder - run make setup-ca-key to populate" ]; then
     echo "ERROR: CA public key not set - run 'make setup-ca-key' first" >&2
     exit 1
 fi

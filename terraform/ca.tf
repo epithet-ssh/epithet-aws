@@ -69,9 +69,9 @@ resource "aws_lambda_function" "ca" {
       AWS_LWA_PORT                 = "8080"
       AWS_LWA_READINESS_CHECK_PATH = "/"
 
-      # Application configuration
-      CA_SECRET_ARN = aws_secretsmanager_secret.ca_key.arn
-      POLICY_URL    = aws_apigatewayv2_api.policy.api_endpoint
+      # Application configuration - secrets passed directly as env vars
+      CA_PRIVATE_KEY = data.aws_secretsmanager_secret_version.ca_key.secret_string
+      POLICY_URL     = aws_apigatewayv2_api.policy.api_endpoint
     }
   }
 

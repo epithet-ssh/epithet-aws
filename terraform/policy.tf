@@ -69,8 +69,8 @@ resource "aws_lambda_function" "policy" {
       AWS_LWA_PORT                 = "8080"
       AWS_LWA_READINESS_CHECK_PATH = "/"
 
-      # Application configuration
-      CA_PUBLIC_KEY_PARAM = aws_ssm_parameter.ca_public_key.name
+      # Application configuration - public key passed directly as env var
+      CA_PUBLIC_KEY = aws_ssm_parameter.ca_public_key.value
     }
   }
 
