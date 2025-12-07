@@ -2,7 +2,7 @@
 
 AWS Lambda deployment template for [epithet](https://github.com/epithet-ssh/epithet) SSH certificate authority and policy server.
 
-**Use this template** to deploy your own epithet CA and policy servers on AWS Lambda with API Gateway, Secrets Manager, SSM Parameter Store, and S3 certificate archival.
+**Use this template** to deploy your own epithet CA and policy servers on AWS Lambda with API Gateway, Secrets Manager, and SSM Parameter Store.
 
 ## Getting Started
 
@@ -19,37 +19,33 @@ Make this a *private* repo as you will have things like your OIDC info in the co
 
 ### 2. Prerequisites
 
-- [Go 1.25+](https://go.dev/dl/)
 - [OpenTofu](https://opentofu.org/) or Terraform
 - AWS CLI configured with credentials
+- curl, zip, make
 
 ### 3. Configure Your Policy
 
 Edit `config/policy/policy.yaml` to configure your OIDC provider and authorization rules:
 
 ```yaml
-# CA public key is loaded from SSM Parameter Store at runtime
-# This placeholder satisfies config validation
-ca_public_key: "placeholder - loaded from SSM"
+policy:
+  oidc_issuer: https://accounts.google.com
+  oidc_audience: your-oauth-client-id.apps.googleusercontent.com
 
-oidc:
-  issuer: https://accounts.google.com
-  audience: your-oauth-client-id.apps.googleusercontent.com
+  users:
+    admin@example.com: [wheel, admin]
+    dev@example.com: [dev]
 
-users:
-  admin@example.com: [wheel, admin]
-  dev@example.com: [dev]
-
-defaults:
-  allow:
-    root: [wheel]
-  expiration: "5m"
-
-hosts:
-  "prod-*":
+  defaults:
     allow:
-      root: [admin]
-    expiration: "2m"
+      root: [wheel]
+    expiration: "5m"
+
+  hosts:
+    "prod-*":
+      allow:
+        root: [admin]
+      expiration: "2m"
 ```
 
 See `config/policy/policy.example.yaml` for a comprehensive example with all OIDC providers and the [epithet policy documentation](https://github.com/epithet-ssh/epithet/blob/main/docs/policy-server.md) for detailed configuration options.
@@ -110,85 +106,83 @@ service sshd reload  # or: systemctl reload sshd
 
 ```
 epithet-aws/
-├── cmd/epithet-aws/     # Lambda handler binary
-│   ├── main.go          # CLI entry point
-│   └── aws.go           # CA and policy Lambda handlers
 ├── config/
 │   └── policy/          # Policy configuration (bundled in Lambda)
-│       └── policy.yaml
-├── pkg/s3archiver/      # S3 certificate archival package
+│       ├── policy.yaml
+├── scripts/
+│   ├── ca-launcher.sh       # CA Lambda startup script
+│   ├── policy-launcher.sh   # Policy Lambda startup script
+│   └── generate-ca-key.sh   # CA key generation
 ├── terraform/           # OpenTofu/Terraform deployment
-│   ├── main.tf          # Provider and common config
-│   ├── ca.tf            # CA Lambda, API Gateway, S3
+│   ├── main.tf          # Provider, common config, Lambda layer
+│   ├── ca.tf            # CA Lambda, API Gateway
 │   ├── policy.tf        # Policy Lambda, API Gateway
 │   ├── secrets.tf       # Secrets Manager, SSM Parameter
 │   ├── variables.tf     # Input variables
 │   └── outputs.tf       # Output values
-└── scripts/             # Deployment automation
+└── Makefile
 ```
 
 ## Make Commands
 
 | Command | Description |
 |---------|-------------|
-| `make build` | Build local binary for testing |
-| `make build-lambda` | Build Lambda deployment packages |
-| `make test` | Run Go tests |
+| `make build-lambda` | Download epithet binary and build Lambda packages |
+| `make download-binary` | Just download the epithet binary |
+| `make test` | Validate launcher scripts |
 | `make init` | Initialize Terraform |
 | `make plan` | Build Lambda and run Terraform plan |
 | `make apply` | Build and deploy to AWS |
 | `make setup-ca-key` | Generate and upload CA key pair |
 | `make destroy` | Tear down all AWS resources |
+| `make clean` | Remove build artifacts |
 
 ## Architecture
+
+This deployment uses the [AWS Lambda Web Adapter](https://github.com/awslabs/aws-lambda-web-adapter) to run the epithet binary directly in Lambda.
 
 ```
 Client (epithet agent)
     ↓
 API Gateway (HTTPS)
     ↓
-CA Lambda ←→ Policy Lambda
-    ↓              ↓
-Secrets Mgr    SSM Param
-(private key)  (public key)
+Lambda Web Adapter
     ↓
-S3 (cert archive)
+epithet binary (CA or Policy)
 ```
 
 ### CA Lambda
 
-- Signs SSH certificates based on policy server decisions
-- Loads CA private key from AWS Secrets Manager
-- Archives certificates to S3
+- Runs `epithet ca` to sign SSH certificates
+- CA private key passed via `CA_PRIVATE_KEY` environment variable (from Secrets Manager)
+- Calls policy server for authorization decisions
 
 **Environment variables** (set by Terraform):
-- `CA_SECRET_ARN`: Secrets Manager ARN for CA private key
+- `CA_PRIVATE_KEY`: CA private key (from Secrets Manager)
 - `POLICY_URL`: Internal URL of policy Lambda
-- `CERT_ARCHIVE_BUCKET`: S3 bucket for archival
-- `CERT_ARCHIVE_PREFIX`: S3 key prefix (default: "certs")
-- `EPITHET_CMD`: Set to "ca"
+- `AWS_LWA_PORT`: HTTP port for Lambda Web Adapter (8080)
 
 ### Policy Lambda
 
+- Runs `epithet policy` to evaluate authorization
 - Validates OIDC tokens from users
-- Evaluates authorization rules from bundled config
-- Loads CA public key from SSM Parameter Store
-- Returns certificate parameters
+- Evaluates rules from bundled config files
+- CA public key passed via `CA_PUBLIC_KEY` environment variable (from SSM)
 
 **Environment variables** (set by Terraform):
-- `CA_PUBLIC_KEY_PARAM`: SSM parameter name for CA public key
-- `EPITHET_CMD`: Set to "policy"
+- `CA_PUBLIC_KEY`: CA public key (from SSM Parameter Store)
+- `AWS_LWA_PORT`: HTTP port for Lambda Web Adapter (8080)
 
 ## Updating Policy Configuration
 
-Edit `config/policy/policy.yaml` and redeploy:
+Edit files in `config/policy/` and redeploy:
 
 ```bash
 vim config/policy/policy.yaml
 make apply
 ```
 
-The policy file is bundled into the Lambda zip, so redeployment is required for changes to take effect.
+Policy files (`.yaml`, `.yml`, `.cue`, `.json`) are bundled into the Lambda zip, so redeployment is required for changes to take effect.
 
 ## Cost Estimate
 
@@ -199,9 +193,8 @@ With typical personal use (a few connections per day):
 | API Gateway | ~$0.05 |
 | Lambda | ~$0.10 |
 | Secrets Manager | ~$0.40 |
-| S3 | ~$0.01 |
 | SSM Parameter | Free |
-| **Total** | **< $1** |
+| **Total** | **< $0.60** |
 
 ## Customization
 
@@ -220,9 +213,16 @@ log_retention_days = 30
 
 ### Update epithet Version
 
+Edit `EPITHET_VERSION` in the Makefile:
+
+```makefile
+EPITHET_VERSION := v0.2.11
+```
+
+Then rebuild and deploy:
+
 ```bash
-go get github.com/epithet-ssh/epithet@v0.2.0
-go mod tidy
+make clean
 make apply
 ```
 
@@ -232,19 +232,19 @@ make apply
 
 ```bash
 # CA Lambda
-aws logs tail /aws/lambda/$(tofu -chdir=terraform output -raw project_name)-ca \
+aws logs tail /aws/lambda/$(tofu -chdir=terraform output -raw ca_function_name) \
   --since 10m --region $(tofu -chdir=terraform output -raw region)
 
 # Policy Lambda
-aws logs tail /aws/lambda/$(tofu -chdir=terraform output -raw project_name)-policy \
+aws logs tail /aws/lambda/$(tofu -chdir=terraform output -raw policy_function_name) \
   --since 10m --region $(tofu -chdir=terraform output -raw region)
 ```
 
 ### Common Issues
 
 - **"CA public key not set"**: Run `make setup-ca-key` after initial deployment
-- **"ca_public_key is required"**: Ensure policy.yaml has the placeholder `ca_public_key` field
 - **500 errors**: Check Lambda logs for detailed error messages
+- **Cold start timeouts**: Increase `lambda_timeout_sec` in Terraform variables
 
 ## License
 
