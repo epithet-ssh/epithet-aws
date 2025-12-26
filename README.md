@@ -216,7 +216,7 @@ log_retention_days = 30
 Edit `EPITHET_VERSION` in the Makefile:
 
 ```makefile
-EPITHET_VERSION := v0.3.2
+EPITHET_VERSION := v0.3.3
 ```
 
 Then rebuild and deploy:

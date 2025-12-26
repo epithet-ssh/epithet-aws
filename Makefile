@@ -1,7 +1,7 @@
 .PHONY: build clean init plan apply destroy setup-ca-key build-lambda download-binary build-ca build-policy test
 
 # Epithet version to use
-EPITHET_VERSION := v0.3.2
+EPITHET_VERSION := v0.3.3
 EPITHET_ARCH := linux_arm64
 EPITHET_URL := https://github.com/epithet-ssh/epithet/releases/download/$(EPITHET_VERSION)/epithet_$(subst v,,$(EPITHET_VERSION))_$(EPITHET_ARCH).tar.gz
 
