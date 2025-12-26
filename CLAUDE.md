@@ -12,7 +12,7 @@ This repository provides:
 2. Terraform/OpenTofu deployment (`terraform/`)
 3. Policy configuration (`config/policy/`)
 
-The core CA and policy logic comes from the pre-built `epithet` binary (v0.3.3) downloaded from GitHub releases.
+The core CA and policy logic comes from the pre-built `epithet` binary (v0.3.4) downloaded from GitHub releases.
 
 ## Architecture
 
