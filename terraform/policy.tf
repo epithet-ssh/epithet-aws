@@ -107,6 +107,13 @@ resource "aws_apigatewayv2_route" "policy_default" {
   target    = "integrations/${aws_apigatewayv2_integration.policy.id}"
 }
 
+# API Gateway route for Policy discovery endpoint
+resource "aws_apigatewayv2_route" "policy_discovery" {
+  api_id    = aws_apigatewayv2_api.policy.id
+  route_key = "GET /d/{hash}"
+  target    = "integrations/${aws_apigatewayv2_integration.policy.id}"
+}
+
 # API Gateway stage for Policy
 resource "aws_apigatewayv2_stage" "policy" {
   api_id      = aws_apigatewayv2_api.policy.id
