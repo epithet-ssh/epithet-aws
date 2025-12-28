@@ -38,3 +38,13 @@ output "region" {
   description = "AWS region where resources are deployed"
   value       = var.aws_region
 }
+
+output "discovery_url" {
+  description = "CloudFront URL for discovery endpoint (cached)"
+  value       = "https://${aws_cloudfront_distribution.discovery.domain_name}"
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID (for cache invalidation)"
+  value       = aws_cloudfront_distribution.discovery.id
+}

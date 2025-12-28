@@ -5,10 +5,12 @@ set -euo pipefail
 # Uses CA public key from environment variable and starts epithet policy
 
 # Required environment variables:
-#   CA_PUBLIC_KEY - CA public key (passed from SSM via env var)
+#   CA_PUBLIC_KEY      - CA public key (passed from SSM via env var)
+#   DISCOVERY_BASE_URL - Base URL for discovery links (CloudFront CDN)
 
 # Validate required environment variables
 : "${CA_PUBLIC_KEY:?CA_PUBLIC_KEY environment variable is required}"
+: "${DISCOVERY_BASE_URL:?DISCOVERY_BASE_URL environment variable is required}"
 
 # Set defaults
 PORT="${AWS_LWA_PORT:-8080}"
@@ -26,4 +28,5 @@ echo "Starting epithet policy server on port ${PORT}..." >&2
 exec /var/task/epithet policy \
     --config '/var/task/*.{yaml,yml,cue,json}' \
     --listen "0.0.0.0:${PORT}" \
-    --ca-pubkey "${CA_PUBLIC_KEY}"
+    --ca-pubkey "${CA_PUBLIC_KEY}" \
+    --discovery-base-url "${DISCOVERY_BASE_URL}"

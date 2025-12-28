@@ -71,6 +71,9 @@ resource "aws_lambda_function" "policy" {
 
       # Application configuration - public key passed directly as env var
       CA_PUBLIC_KEY = aws_ssm_parameter.ca_public_key.value
+
+      # Base URL for discovery links (via CloudFront CDN)
+      DISCOVERY_BASE_URL = "https://${aws_cloudfront_distribution.discovery.domain_name}"
     }
   }
 
