@@ -12,7 +12,7 @@ This repository provides:
 2. Terraform/OpenTofu deployment (`terraform/`)
 3. Policy configuration (`config/policy/`)
 
-The core CA and policy logic comes from the pre-built `epithet` binary (v0.3.4) downloaded from GitHub releases.
+The core CA and policy logic comes from the pre-built `epithet` binary (v0.5.0) downloaded from GitHub releases.
 
 ## Architecture
 
@@ -77,23 +77,40 @@ Policy configuration is bundled into the Lambda zip from `config/policy/`. Edit 
 
 ### CA Lambda (`scripts/ca-launcher.sh`)
 
-1. Fetches CA private key from Secrets Manager (`CA_SECRET_ARN`)
+1. Receives CA private key via environment variable (`CA_PRIVATE_KEY`)
 2. Writes key to `/tmp/ca.key` with secure permissions
 3. Starts `epithet ca --listen 0.0.0.0:8080 --key /tmp/ca.key --policy $POLICY_URL`
 
+The CA server exposes:
+- `GET /` - Returns CA public key with `Link` header pointing to bootstrap endpoint
+- `POST /` - Signs certificates (requires Bearer token)
+
 ### Policy Lambda (`scripts/policy-launcher.sh`)
 
-1. Fetches CA public key from SSM Parameter Store (`CA_PUBLIC_KEY_PARAM`)
-2. Starts `epithet policy --listen 0.0.0.0:8080 --ca-pubkey "$CA_PUBLIC_KEY"`
+1. Receives CA public key via environment variable (`CA_PUBLIC_KEY`)
+2. Starts `epithet policy --listen 0.0.0.0:8080 --ca-pubkey "$CA_PUBLIC_KEY" --discovery-base-url "$DISCOVERY_BASE_URL"`
 3. Policy config loaded from `/var/task/policy.yaml` (bundled in zip)
 
+The policy server exposes:
+- `POST /` - Evaluates policy for certificate requests
+- `GET /d/bootstrap` - Redirects to content-addressed bootstrap endpoint (unauthenticated)
+- `GET /d/current` - Redirects to content-addressed discovery endpoint (authenticated)
+- `GET /d/{hash}` - Serves content-addressed bootstrap/discovery data
+
 Both use the AWS Lambda Web Adapter layer to handle API Gateway integration.
+
+### Discovery Caching (CloudFront)
+
+Discovery endpoints are cached via CloudFront CDN:
+- Bootstrap and discovery redirect endpoints: 5-minute cache
+- Content-addressed endpoints (`/d/{hash}`): 1-year immutable cache
 
 ## Terraform Structure
 
 - `main.tf` - Common tags, name prefixes, Lambda Web Adapter layer ARN
 - `ca.tf` - CA Lambda, API Gateway, IAM roles
 - `policy.tf` - Policy Lambda, API Gateway, IAM roles
+- `cloudfront.tf` - CloudFront distribution for discovery endpoint caching
 - `secrets.tf` - Secrets Manager secret for CA private key, SSM parameter for CA public key
 - `variables.tf` - Input variables (project name, region, log retention)
 - `outputs.tf` - CA URL, policy URL, CA public key
@@ -104,18 +121,20 @@ Both use the AWS Lambda Web Adapter layer to handle API Gateway integration.
 - ARM64 architecture for cost savings
 - Secrets Manager for CA private key
 - SSM Parameter Store for CA public key
+- CloudFront distribution for discovery endpoint caching
 
 ## Environment Variables
 
 ### CA Lambda
-- `CA_SECRET_ARN` - Secrets Manager ARN for CA private key
-- `POLICY_URL` - Internal policy Lambda endpoint
+- `CA_PRIVATE_KEY` - CA private key (from Secrets Manager)
+- `POLICY_URL` - Policy Lambda endpoint
 - `AWS_LAMBDA_EXEC_WRAPPER` - Set to `/opt/bootstrap` for Lambda Web Adapter
 - `AWS_LWA_PORT` - Port for HTTP server (8080)
 - `AWS_LWA_READINESS_CHECK_PATH` - Health check path (/)
 
 ### Policy Lambda
-- `CA_PUBLIC_KEY_PARAM` - SSM parameter name containing CA public key
+- `CA_PUBLIC_KEY` - CA public key (from SSM Parameter Store)
+- `DISCOVERY_BASE_URL` - CloudFront CDN URL for discovery links
 - `AWS_LAMBDA_EXEC_WRAPPER` - Set to `/opt/bootstrap` for Lambda Web Adapter
 - `AWS_LWA_PORT` - Port for HTTP server (8080)
 - `AWS_LWA_READINESS_CHECK_PATH` - Health check path (/)
@@ -185,6 +204,7 @@ Required tools:
 AWS resources created:
 - 2 Lambda functions (CA + Policy)
 - 2 API Gateway HTTP APIs
+- 1 CloudFront distribution (discovery caching)
 - 1 Secrets Manager secret (CA private key)
 - 1 SSM parameter (CA public key)
 - IAM roles and policies

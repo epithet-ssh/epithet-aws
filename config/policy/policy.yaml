@@ -3,8 +3,10 @@ policy:
   # This placeholder satisfies config validation
   ca_pubkey: "placeholder - loaded from SSM"
 
-  oidc_issuer: https://accounts.google.com
-  oidc_audience: abc123
+  oidc:
+    issuer: https://accounts.google.com
+    client_id: abc123
+    # scopes: ["openid", "profile", "email"]  # optional, these are the defaults
 
   users:
     a@example: [wheel]

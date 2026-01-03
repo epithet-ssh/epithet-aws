@@ -110,10 +110,24 @@ resource "aws_apigatewayv2_route" "policy_default" {
   target    = "integrations/${aws_apigatewayv2_integration.policy.id}"
 }
 
-# API Gateway route for Policy discovery endpoint
+# API Gateway route for Policy discovery content-addressed endpoint
 resource "aws_apigatewayv2_route" "policy_discovery" {
   api_id    = aws_apigatewayv2_api.policy.id
   route_key = "GET /d/{hash}"
+  target    = "integrations/${aws_apigatewayv2_integration.policy.id}"
+}
+
+# API Gateway route for bootstrap redirect (unauthenticated)
+resource "aws_apigatewayv2_route" "policy_bootstrap" {
+  api_id    = aws_apigatewayv2_api.policy.id
+  route_key = "GET /d/bootstrap"
+  target    = "integrations/${aws_apigatewayv2_integration.policy.id}"
+}
+
+# API Gateway route for discovery redirect (authenticated)
+resource "aws_apigatewayv2_route" "policy_discovery_current" {
+  api_id    = aws_apigatewayv2_api.policy.id
+  route_key = "GET /d/current"
   target    = "integrations/${aws_apigatewayv2_integration.policy.id}"
 }
 
