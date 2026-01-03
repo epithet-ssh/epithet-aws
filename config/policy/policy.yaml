@@ -3,10 +3,9 @@ policy:
   # This placeholder satisfies config validation
   ca_pubkey: "placeholder - loaded from SSM"
 
-  oidc:
-    issuer: https://accounts.google.com
-    client_id: abc123
-    # scopes: ["openid", "profile", "email"]  # optional, these are the defaults
+  oidc_issuer: https://accounts.google.com
+  oidc_client_id: your-client-id
+  # oidc_client_secret: your-client-secret  # required for token exchange
 
   users:
     a@example: [wheel]
