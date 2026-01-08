@@ -250,6 +250,10 @@ aws logs tail /aws/lambda/$(tofu -chdir=terraform output -raw policy_function_na
 
 Same as [epithet](https://github.com/epithet-ssh/epithet) - see LICENSE in main repository.
 
+## Releases
+
+Version updates are coordinated via the [packaging](https://github.com/epithet-ssh/packaging) repository, which orchestrates unified releases across all epithet-ssh projects.
+
 ## Related Projects
 
 - [epithet](https://github.com/epithet-ssh/epithet) - Core SSH CA implementation
