@@ -39,6 +39,24 @@ resource "aws_iam_role_policy" "policy_lambda_ssm" {
   })
 }
 
+# Policy to allow Policy Lambda to read from AppConfig
+resource "aws_iam_role_policy" "policy_lambda_appconfig" {
+  name = "${local.name_prefix}-policy-appconfig"
+  role = aws_iam_role.policy_lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "appconfig:StartConfigurationSession",
+        "appconfig:GetLatestConfiguration"
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
 # CloudWatch log group for Policy Lambda
 resource "aws_cloudwatch_log_group" "policy_lambda" {
   name              = "/aws/lambda/${local.name_prefix}-policy"
@@ -59,8 +77,11 @@ resource "aws_lambda_function" "policy" {
   timeout          = var.lambda_timeout_sec
   source_code_hash = filebase64sha256("../bin/policy.zip")
 
-  # AWS Lambda Web Adapter layer
-  layers = [local.lambda_web_adapter_layer_arn]
+  # AWS Lambda Web Adapter layer and AppConfig extension
+  layers = [
+    local.lambda_web_adapter_layer_arn,
+    local.appconfig_extension_layer_arn,
+  ]
 
   environment {
     variables = {
@@ -74,6 +95,11 @@ resource "aws_lambda_function" "policy" {
 
       # Base URL for discovery links (via CloudFront CDN)
       DISCOVERY_BASE_URL = "https://${aws_cloudfront_distribution.discovery.domain_name}"
+
+      # AppConfig settings for policy-source
+      APPCONFIG_APPLICATION   = aws_appconfig_application.policy.name
+      APPCONFIG_ENVIRONMENT   = aws_appconfig_environment.policy.name
+      APPCONFIG_CONFIGURATION = aws_appconfig_configuration_profile.policy.name
     }
   }
 
@@ -81,6 +107,7 @@ resource "aws_lambda_function" "policy" {
     aws_cloudwatch_log_group.policy_lambda,
     aws_iam_role_policy_attachment.policy_lambda_logs,
     aws_iam_role_policy.policy_lambda_ssm,
+    aws_iam_role_policy.policy_lambda_appconfig,
   ]
 
   tags = local.common_tags

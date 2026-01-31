@@ -43,4 +43,8 @@ locals {
 
   # Lambda Web Adapter layer ARN for arm64
   lambda_web_adapter_layer_arn = "arn:aws:lambda:${data.aws_region.current.name}:753240598075:layer:LambdaAdapterLayerArm64:25"
+
+  # AWS AppConfig Lambda extension layer ARN for arm64
+  # See: https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-integration-lambda-extensions-versions.html
+  appconfig_extension_layer_arn = "arn:aws:lambda:${data.aws_region.current.name}:027255383542:layer:AWS-AppConfig-Extension-Arm64:98"
 }

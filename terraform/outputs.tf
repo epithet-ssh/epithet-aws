@@ -48,3 +48,18 @@ output "cloudfront_distribution_id" {
   description = "CloudFront distribution ID (for cache invalidation)"
   value       = aws_cloudfront_distribution.discovery.id
 }
+
+output "appconfig_application" {
+  description = "AppConfig application name for policy source"
+  value       = aws_appconfig_application.policy.name
+}
+
+output "appconfig_environment" {
+  description = "AppConfig environment name for policy source"
+  value       = aws_appconfig_environment.policy.name
+}
+
+output "appconfig_configuration_profile" {
+  description = "AppConfig configuration profile name for policy source"
+  value       = aws_appconfig_configuration_profile.policy.name
+}
