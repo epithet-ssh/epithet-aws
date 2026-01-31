@@ -30,7 +30,7 @@ resource "aws_appconfig_hosted_configuration_version" "policy" {
   application_id           = aws_appconfig_application.policy.id
   configuration_profile_id = aws_appconfig_configuration_profile.policy.configuration_profile_id
   content_type             = "text/plain" # CUE doesn't have a registered MIME type
-  content                  = file("${path.module}/../config/policy/policy-source.cue")
+  content                  = file("${path.module}/../config/policy-source.cue")
   description              = "Policy source"
 }
 

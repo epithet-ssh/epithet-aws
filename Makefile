@@ -1,4 +1,4 @@
-.PHONY: build clean init plan apply destroy setup-ca-key build-lambda download-binary build-ca build-policy test
+.PHONY: build clean init plan apply destroy setup-ca-key build-lambda download-binary build-ca build-policy test deploy-config
 
 # Epithet version to use
 EPITHET_VERSION := v0.8.1
@@ -57,6 +57,10 @@ plan: build-lambda
 
 # Apply infrastructure changes
 apply: build-lambda
+	cd terraform && tofu apply
+
+# Deploy config-only changes (no Lambda rebuild)
+deploy-config:
 	cd terraform && tofu apply
 
 # Destroy infrastructure
