@@ -82,7 +82,7 @@ Policy configuration is bundled into the Lambda zip from `config/policy/`. Edit 
 3. Starts `epithet ca --listen 0.0.0.0:8080 --key /tmp/ca.key --policy $POLICY_URL`
 
 The CA server exposes:
-- `GET /` - Returns CA public key with `Link` header pointing to bootstrap endpoint
+- `GET /` - Returns CA public key with `Link` header pointing to discovery endpoint
 - `POST /` - Signs certificates (requires Bearer token)
 
 ### Policy Lambda (`scripts/policy-launcher.sh`)
@@ -93,8 +93,7 @@ The CA server exposes:
 
 The policy server exposes:
 - `POST /` - Evaluates policy for certificate requests
-- `GET /d/bootstrap` - Redirects to content-addressed bootstrap endpoint (unauthenticated)
-- `GET /d/current` - Redirects to content-addressed discovery endpoint (authenticated)
+- `GET /d/current` - Redirects to content-addressed endpoint; unauthenticated requests get bootstrap data, authenticated requests get full discovery data (distinguished by `Authorization` header)
 - `GET /d/{hash}` - Serves content-addressed bootstrap/discovery data
 
 Both use the AWS Lambda Web Adapter layer to handle API Gateway integration.
@@ -102,7 +101,7 @@ Both use the AWS Lambda Web Adapter layer to handle API Gateway integration.
 ### Discovery Caching (CloudFront)
 
 Discovery endpoints are cached via CloudFront CDN:
-- Bootstrap and discovery redirect endpoints: 5-minute cache
+- `/d/current` redirect: 5-minute cache, keyed on `Authorization` header (`Vary: Authorization`) so authenticated and unauthenticated responses are cached separately
 - Content-addressed endpoints (`/d/{hash}`): 1-year immutable cache
 
 ## Terraform Structure
